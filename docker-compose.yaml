@@ -1,0 +1,33 @@
+version: '3.3'
+
+volumes:
+  db_data_nest: # mount it internally instead of a folder. it avoids file lock problems
+
+services:
+  db-dev:
+    container_name: db_nest_dev
+    image: mariadb
+    volumes:
+      - db_data_nest:/var/lib/mysql
+    restart: always
+    ports:
+      - '33065:3306'
+    environment:
+      MYSQL_ROOT_PASSWORD: admin321
+      MYSQL_DATABASE: nest_db
+
+  app:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    image: node-backend-app
+    depends_on:
+      - db-dev
+    stdin_open: true
+    tty: true
+    volumes:
+      - .:/app
+    environment:
+      - DB_HOST=db-dev
+    ports:
+      - 5000:5000
