@@ -6,8 +6,8 @@ import { TypeOrmModule } from '@nestjs/typeorm'
 import { PassportModule } from '@nestjs/passport'
 import { UsersModule } from '../user/user.module'
 import { AuthController } from './auth.controller'
-import { RefreshToken } from 'src/entities/refresh_token.entity'
-import { UserActivationToken } from 'src/entities/user_activation_token.entity'
+import { RefreshToken } from '../../entities/refresh_token.entity'
+import { UserActivationToken } from '../../entities/user_activation_token.entity'
 
 @Module({
   imports: [

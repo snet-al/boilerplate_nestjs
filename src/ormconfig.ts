@@ -1,6 +1,3 @@
-require('dotenv').config()
-import { DataSource } from 'typeorm'
-
 const getConnectionType = (type: any) => {
   switch (type) {
     case 'mysql':
@@ -14,7 +11,7 @@ const getConnectionType = (type: any) => {
   }
 }
 
-const ormconfiguration = {
+const OrmConfiguration = {
   type: getConnectionType(process.env.TYPEORM_CONNECTION),
   host: process.env.TYPEORM_HOST,
   port: Number(process.env.TYPEORM_PORT),
@@ -25,6 +22,4 @@ const ormconfiguration = {
   migrations: [process.env.TYPEORM_MIGRATIONS],
 }
 
-const ormconfig = new DataSource(ormconfiguration)
-export { ormconfiguration }
-export default ormconfig
+export default OrmConfiguration
