@@ -15,6 +15,7 @@ import { Body, Controller, Get, Inject, Param, ParseIntPipe, Post, Put, Req, Res
 @ApiBearerAuth()
 export class UserController extends BaseController {
   @Inject(UserService)
+  //od e shpjegopj me vone bledi
   private readonly service: UserService
 
   @Get()
@@ -48,8 +49,10 @@ export class UserController extends BaseController {
   })
   async findOne(@Param('id', ParseIntPipe, FindUserOrFailPipeService) user: User, @Res() res) {
     try {
+      const user = this.findOne()
       return this.success(res, user.baseGroup)
     } catch (err) {
+      if(err)
       return this.error(res, err.message)
     }
   }
