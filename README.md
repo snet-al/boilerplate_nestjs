@@ -96,3 +96,8 @@ Instead of using npx is better to use local `@nestjs/cli`
 example:
 
 > `./node_modules/@nestjs/cli/bin/nest.js g module app-firebasse`
+
+
+
+# Note
+Please update _@types/node_  dependency if you encounter the below issue: https://github.com/DefinitelyTyped/DefinitelyTyped/issues/42368
