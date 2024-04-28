@@ -7,10 +7,11 @@ import { AppAuthModule } from './app-auth/app-auth.module'
 import { AppDocumentsModule } from './app-documents/app-documents.module'
 import { MailerModule } from '@nestjs-modules/mailer'
 import { AppJobsModule } from './app-jobs/app-jobs.module'
+import { ormconfiguration } from './ormconfig'
 
 @Module({
   imports: [
-    TypeOrmModule.forRoot(),
+    TypeOrmModule.forRoot(ormconfiguration),
     AppAuthModule,
     AppApiModule,
     AppDocumentsModule,
