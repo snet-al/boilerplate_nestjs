@@ -76,6 +76,10 @@ export class User extends BasicEntity {
       parentId: this.parentId,
     }
   }
+
+  public get fullName() {
+    return this.name
+  }
 }
 
 // @EntityRepository(User)

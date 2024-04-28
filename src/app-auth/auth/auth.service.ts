@@ -12,6 +12,7 @@ import { ValidateBodyTokenDto } from './dto/validate-body-token.dto'
 import { PasswordResetRequestDto } from './dto/password-reset-request.dto'
 import { UserActivationToken } from '../../entities/user_activation_token.entity'
 import { BadRequestException, ForbiddenException, Inject, Injectable, UnauthorizedException } from '@nestjs/common'
+import { MailerService } from '@nestjs-modules/mailer'
 
 @Injectable()
 export class AuthService {
@@ -20,6 +21,9 @@ export class AuthService {
 
   @Inject(UserService)
   private userService: UserService
+
+  @Inject(MailerService)
+  private mailerService: MailerService
 
   @InjectRepository(UserActivationToken)
   private userActivationTokenRepository: Repository<UserActivationToken>
@@ -101,19 +105,19 @@ export class AuthService {
     await this.userService.update(user.id, { passwordResetToken })
 
     // TODO: Add email service
-    // this.mailerService
-    //   .sendMail({
-    //     to: user.email,
-    //     subject: 'Password Reset',
-    //     template: './templates/email/password-reset',
-    //     context: {
-    //       name: user.fullName,
-    //       link: `${process.env.FRONT_BASE_URL}/reset-password?token=${passwordResetToken}`,
-    //     },
-    //   })
-    //   .catch((err) => {
-    //     throw err
-    //   })
+    this.mailerService
+      .sendMail({
+        to: user.email,
+        subject: 'Password Reset',
+        template: './templates/email/password-reset',
+        context: {
+          name: user.fullName,
+          link: `${process.env.FRONT_BASE_URL}/reset-password?token=${passwordResetToken}`,
+        },
+      })
+      .catch((err) => {
+        throw err
+      })
 
     return {
       message: 'Password reset link requested successfully!',
