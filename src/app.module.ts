@@ -8,10 +8,12 @@ import { AppDocumentsModule } from './app-documents/app-documents.module'
 import { MailerModule } from '@nestjs-modules/mailer'
 import { AppJobsModule } from './app-jobs/app-jobs.module'
 import { ormconfiguration } from './ormconfig'
+import { MongooseModule } from '@nestjs/mongoose';
 
 @Module({
   imports: [
     TypeOrmModule.forRoot(ormconfiguration),
+    MongooseModule.forRoot('mongodb://host.docker.internal:27017/debaterly_dev'),
     AppAuthModule,
     AppApiModule,
     AppDocumentsModule,

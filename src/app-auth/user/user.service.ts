@@ -33,7 +33,7 @@ export class UserService {
     }
 
     let createdUser = this.repository.create(createdUserDto)
-    createdUser.password = await bcrypt.hash('admin321', 10)
+    createdUser.password = await bcrypt.hash(createdUserDto.password, 10)
     const user = await this.repository.save(createdUser)
 
     if (createdUserDto.roleIds) {
