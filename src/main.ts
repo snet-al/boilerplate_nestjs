@@ -8,6 +8,7 @@ import * as basicAuth from 'express-basic-auth'
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger'
 import { NestExpressApplication } from '@nestjs/platform-express'
 import { localAuthMiddleware } from './middleware/local_auth.middleware'
+import { mdcMiddleware } from './common/mdc/mdc.middleware'
 
 const PORT = process.env.PORT ? Number(process.env.PORT) : 5000
 
@@ -15,6 +16,7 @@ async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule)
   app.useStaticAssets(join(__dirname, '..', 'public'))
   app.use(localAuthMiddleware)
+  app.use(mdcMiddleware)
   app.enableCors()
 
   if (process.env.SWAGGER_USER && process.env.SWAGGER_PASSWORD) {

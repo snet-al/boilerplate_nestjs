@@ -9,6 +9,7 @@ import { ValidateBodyTokenDto } from './dto/validate-body-token.dto'
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger'
 import { PasswordResetRequestDto } from './dto/password-reset-request.dto'
 import { Controller, Post, Body, ValidationPipe, UsePipes, Res, UseGuards, Req, Put, Inject } from '@nestjs/common'
+import { SignupDto } from './dto/signup.dto'
 
 @ApiTags('Authentication')
 @Controller()
@@ -26,6 +27,21 @@ export class AuthController extends BaseController {
   async login(@Body() loginDto: LoginDto, @Res() res: Response) {
     try {
       const data = await this.authService.login(loginDto)
+      return this.success(res, data)
+    } catch (err) {
+      return this.error(res, err.message)
+    }
+  }
+
+  @Post('/signup')
+  @ApiResponse({
+    status: 200,
+    description: 'User created',
+  })
+  @UsePipes(new ValidationPipe())
+  async signup(@Body() dto: SignupDto, @Res() res: Response) {
+    try {
+      const data = await this.authService.signup(dto)
       return this.success(res, data)
     } catch (err) {
       return this.error(res, err.message)

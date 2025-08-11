@@ -8,12 +8,14 @@ import { UsersModule } from '../user/user.module'
 import { AuthController } from './auth.controller'
 import { RefreshToken } from 'src/entities/refresh_token.entity'
 import { UserActivationToken } from 'src/entities/user_activation_token.entity'
+import { MailerModule } from '@nestjs-modules/mailer'
 
 @Module({
   imports: [
     UsersModule,
     PassportModule,
     ConfigModule,
+    MailerModule,
     TypeOrmModule.forFeature([UserActivationToken, RefreshToken]),
     JwtModule.register({
       secret: process.env.JWT_SECRET || 'testkey',

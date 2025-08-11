@@ -7,6 +7,7 @@ import { InjectRepository } from '@nestjs/typeorm'
 import { TokenPayloadDto } from './dto/token-payload.dto'
 import { User, UserStatus } from '../../entities/user.entity'
 import { ResetPasswordDto } from '../user/dto/reset-password.dto'
+import { SignupDto } from './dto/signup.dto'
 import { RefreshToken } from '../../entities/refresh_token.entity'
 import { ValidateBodyTokenDto } from './dto/validate-body-token.dto'
 import { PasswordResetRequestDto } from './dto/password-reset-request.dto'
@@ -37,18 +38,17 @@ export class AuthService {
       throw new ForbiddenException('Wrong Credentials!')
     }
 
+    const accessExp = (process.env.JWT_ACCESS_TOKEN_EXPIRATION || '1d').trim()
+    const refreshExp = (process.env.JWT_REFRESH_TOKEN_EXPIRATION || '7d').trim()
+
     const accessToken = this.jwtService.sign(
       { sub: user.id, email: user.email },
-      {
-        expiresIn: process.env.JWT_ACCESS_TOKEN_EXPIRATION,
-      },
+      { expiresIn: accessExp },
     )
 
     const refreshToken = this.jwtService.sign(
       { sub: user.id, email: user.email },
-      {
-        expiresIn: process.env.JWT_REFRESH_TOKEN_EXPIRATION,
-      },
+      { expiresIn: refreshExp },
     )
     const updatedToken = await this.updateRefreshToken(refreshToken, user.id)
 
@@ -65,6 +65,28 @@ export class AuthService {
     }
   }
 
+  async signup(signupDto: SignupDto) {
+    const user = await this.userService.createPublic(signupDto)
+
+    // Send set-password link via the reset page
+    const activationToken = this.jwtService.sign(
+      { email: user.email },
+      { secret: process.env.JWT_ACCESS_TOKEN_SECRET || 'secret', expiresIn: '7d' },
+    )
+    const frontBase = process.env.FRONT_BASE_URL || 'http://localhost:3000'
+    const activationLink = `${frontBase}/auth/reset-password?token=${activationToken}`
+    this.mailerService
+      .sendMail({
+        to: user.email,
+        subject: 'Set your password',
+        template: 'password-reset',
+        context: { name: user.fullName, link: activationLink },
+      })
+      .catch(() => {})
+
+    return this.getUserData(user)
+  }
+
   async resetPassword(resetPasswordDto: ResetPasswordDto) {
     const { password, passwordConfirmation, token } = resetPasswordDto
 
@@ -77,14 +99,13 @@ export class AuthService {
       throw new UnauthorizedException('Invalid reset token!')
     }
 
-    const user = await this.userService.findOne({ email: decodedToken.email, passwordResetToken: token })
+    const user = await this.userService.findOne({ email: decodedToken.email })
     if (!user) {
       throw new UnauthorizedException('User not found!')
     }
 
     await this.userService.update(user.id, {
       password: await bcrypt.hash(password, 10),
-      passwordResetToken: null,
     })
 
     return this.getUserData(user)
@@ -102,17 +123,16 @@ export class AuthService {
       { email: user.email },
       { secret: process.env.JWT_ACCESS_TOKEN_SECRET || 'secret', expiresIn: '2d' },
     )
-    await this.userService.update(user.id, { passwordResetToken })
 
     // TODO: Add email service
     this.mailerService
       .sendMail({
         to: user.email,
         subject: 'Password Reset',
-        template: './templates/email/password-reset',
+        template: 'password-reset',
         context: {
           name: user.fullName,
-          link: `${process.env.FRONT_BASE_URL}/reset-password?token=${passwordResetToken}`,
+          link: `${process.env.FRONT_BASE_URL || 'http://localhost:3000'}/auth/reset-password?token=${passwordResetToken}`,
         },
       })
       .catch((err) => {
@@ -130,7 +150,7 @@ export class AuthService {
       throw new UnauthorizedException('Token is not valid or has expired!')
     }
 
-    const user = await this.userService.findOne({ email: decodedToken.email, passwordResetToken: dto.token })
+    const user = await this.userService.findOne({ email: decodedToken.email })
     if (!user) {
       throw new UnauthorizedException('Token is not valid or has expired!')
     }
@@ -149,10 +169,9 @@ export class AuthService {
   }
 
   getAccessToken(payload: TokenPayloadDto) {
-    return this.jwtService.sign(payload, {
-      secret: process.env.JWT_ACCESS_TOKEN_SECRET,
-      expiresIn: process.env.JWT_ACCESS_TOKEN_EXPIRATION,
-    })
+    // Use JwtModule default secret; control expiration with sane default
+    const accessExp = (process.env.JWT_ACCESS_TOKEN_EXPIRATION || '1d').trim()
+    return this.jwtService.sign(payload, { expiresIn: accessExp })
   }
 
   verifyAndDecodeToken(token: string) {

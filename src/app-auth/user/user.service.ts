@@ -8,6 +8,7 @@ import { User, UserStatus } from '../../entities/user.entity'
 import { UsersRoles } from '../../entities/users_roles.entity'
 import { PaginationService } from '../../common/pagination.service'
 import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common'
+import { SignupDto } from '../auth/dto/signup.dto'
 
 @Injectable()
 export class UserService {
@@ -56,6 +57,22 @@ export class UserService {
     )
 
     return user[0]
+  }
+
+  async createPublic(signupDto: SignupDto) {
+    const existing = await this.repository.findOne({ where: { email: signupDto.email } })
+    if (existing) {
+      throw new ConflictException('This email is already used to register a user!')
+    }
+    const userEntity = this.repository.create({
+      email: signupDto.email,
+      name: signupDto.name,
+      password: await bcrypt.hash(signupDto.password, 10),
+      status: UserStatus.PENDING,
+      isEmailVerified: false,
+    })
+    const saved = await this.repository.save(userEntity)
+    return saved
   }
 
   async getAll(request: any, filters: any) {
