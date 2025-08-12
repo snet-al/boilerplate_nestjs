@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common'
+import { ConfigModule } from '@nestjs/config'
 import { TypeOrmModule } from '@nestjs/typeorm'
 import { AppController } from './app.controller'
 import { AppApiModule } from './app-api/app-api.module'
@@ -11,6 +12,7 @@ import { ormconfiguration } from './ormconfig'
 
 @Module({
   imports: [
+    ConfigModule.forRoot({ isGlobal: true }),
     TypeOrmModule.forRoot(ormconfiguration),
     AppAuthModule,
     AppApiModule,

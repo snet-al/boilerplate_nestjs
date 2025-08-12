@@ -46,6 +46,18 @@ export class User extends BasicEntity {
   @Column({ name: 'last_login', type: 'date', nullable: true })
   lastLogin: Date
 
+  @Column({ name: 'external_user_id', type: 'varchar', nullable: true })
+  externalUserId: string
+
+  @Column({ name: 'external_api_key', type: 'varchar', nullable: true })
+  externalApiKey: string
+
+  @Column({ name: 'external_provider', type: 'varchar', default: 'litellm', nullable: true })
+  externalProvider: string
+
+  @Column({ name: 'external_metadata', type: 'json', nullable: true })
+  externalMetadata: Record<string, any>
+
   @OneToMany(() => UsersRoles, (userRole) => userRole.user)
   userRoles: UsersRoles[]
 

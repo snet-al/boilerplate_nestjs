@@ -23,6 +23,9 @@ const ormconfiguration = {
   database: process.env.TYPEORM_DATABASE,
   entities: [process.env.TYPEORM_ENTITIES],
   migrations: [process.env.TYPEORM_MIGRATIONS],
+  synchronize: process.env.TYPEORM_SYNCHRONIZE === 'true',
+  logging: process.env.TYPEORM_LOGGING === 'true',
+  migrationsRun: process.env.TYPEORM_MIGRATIONS_RUN === 'true',
 }
 
 const ormconfig = new DataSource(ormconfiguration)

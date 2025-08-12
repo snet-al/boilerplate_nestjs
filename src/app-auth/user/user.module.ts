@@ -8,9 +8,10 @@ import { UserController } from './user.controller'
 import { JwtStrategy } from '../strategies/jwt.strategy'
 import { UsersRoles } from '../../entities/users_roles.entity'
 import { PaginationService } from '../../common/pagination.service'
+import { CommonModule } from '../../common/common.module'
 
 @Module({
-  imports: [TypeOrmModule.forFeature([User, UsersRoles, Role]), JwtModule.register({})],
+  imports: [TypeOrmModule.forFeature([User, UsersRoles, Role]), JwtModule.register({}), CommonModule],
   providers: [UserService, PaginationService, JwtStrategy],
   controllers: [UserController],
   exports: [UserService],

@@ -33,10 +33,18 @@ export class AuthService {
   private tokenRepository: Repository<RefreshToken>
 
   async login(loginDto: LoginDto) {
-    const user = await this.validateCredentials(loginDto.email, loginDto.password)
+    let user = await this.validateCredentials(loginDto.email, loginDto.password)
     if (!user) {
       throw new ForbiddenException('Wrong Credentials!')
     }
+
+    // Ensure external user exists for current account (to enable key management)
+    try {
+      if (!user.externalUserId) {
+        await this.userService.syncExistingUserWithExternal(user.id)
+        user = await this.userService.findOne({ id: user.id })
+      }
+    } catch (_) {}
 
     const accessExp = (process.env.JWT_ACCESS_TOKEN_EXPIRATION || '1d').trim()
     const refreshExp = (process.env.JWT_REFRESH_TOKEN_EXPIRATION || '7d').trim()
@@ -59,14 +67,27 @@ export class AuthService {
         expiresAt: updatedToken.expiresAt,
       },
       user: {
+        id: user.id,
         name: user.name,
         email: user.email,
+        externalUserId: user.externalUserId,
       },
     }
   }
 
   async signup(signupDto: SignupDto) {
-    const user = await this.userService.createPublic(signupDto)
+    let user = await this.userService.createPublic(signupDto)
+
+    // Ensure external user sync completed successfully (similar to login flow)
+    if (!user.externalUserId) {
+      try {
+        await this.userService.syncExistingUserWithExternal(user.id)
+        user = await this.userService.findOne({ id: user.id })
+      } catch (error) {
+        // Log error but don't fail signup
+        console.warn('Failed to sync external user during signup:', error.message)
+      }
+    }
 
     // Send set-password link via the reset page
     const activationToken = this.jwtService.sign(
@@ -84,7 +105,34 @@ export class AuthService {
       })
       .catch(() => {})
 
-    return this.getUserData(user)
+    // Return the same format as login to ensure consistency
+    const accessExp = (process.env.JWT_ACCESS_TOKEN_EXPIRATION || '1d').trim()
+    const refreshExp = (process.env.JWT_REFRESH_TOKEN_EXPIRATION || '7d').trim()
+
+    const accessToken = this.jwtService.sign(
+      { sub: user.id, email: user.email },
+      { expiresIn: accessExp },
+    )
+
+    const refreshToken = this.jwtService.sign(
+      { sub: user.id, email: user.email },
+      { expiresIn: refreshExp },
+    )
+    const updatedToken = await this.updateRefreshToken(refreshToken, user.id)
+
+    return {
+      authentication: {
+        accessToken,
+        refreshToken,
+        expiresAt: updatedToken.expiresAt,
+      },
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        externalUserId: user.externalUserId,
+      },
+    }
   }
 
   async resetPassword(resetPasswordDto: ResetPasswordDto) {

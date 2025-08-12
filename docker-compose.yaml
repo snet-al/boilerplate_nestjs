@@ -14,6 +14,24 @@ services:
       MYSQL_ROOT_PASSWORD: admin321
       MYSQL_DATABASE: nest_db
 
+  # litellm:
+  #   container_name: litellm_proxy
+  #   image: ghcr.io/berriai/litellm:main-latest
+  #   ports:
+  #     - '4000:4000'
+  #   environment:
+  #     - LITELLM_MASTER_KEY=sk-1234567890abcdef
+  #     - LITELLM_DATABASE_URL=sqlite:///litellm.db
+  #     - LITELLM_LOG_LEVEL=INFO
+  #     - LITELLM_STORE_MODEL_IN_DB=True
+  #   volumes:
+  #     - ./litellm_config.yaml:/app/config.yaml
+  #     - ./litellm.db:/app/litellm.db
+  #   command: ["--config", "/app/config.yaml", "--port", "4000", "--num_workers", "1"]
+  #   restart: always
+  #   depends_on:
+  #     - db-dev
+
   app:
     build:
       context: .
@@ -22,6 +40,7 @@ services:
     restart: always
     depends_on:
       - db-dev
+      # - litellm
     stdin_open: true
     tty: true
     volumes:
@@ -44,7 +63,13 @@ services:
       - TYPEORM_MIGRATIONS=./src/migrations/*.ts
       - TYPEORM_ENTITIES_DIR=./src/entities/
       - TYPEORM_MIGRATIONS_DIR=./src/migrations/
-      - TYPEORM_MIGRATIONS_RUN=false
+      - TYPEORM_MIGRATIONS_RUN=true
       - TYPEORM_DROP_SCHEMA=false
+      # LiteLLM Configuration
+      - LITELLM_BASE_URL=http://host.docker.internal:4000
+      - LITELLM_API_KEY=sk-1234
+      - EXTERNAL_USER_PROVIDER=litellm
+      - DEFAULT_USER_BUDGET=10.0
+      - FAIL_ON_EXTERNAL_USER_ERROR=false
     ports:
       - '5050:5000'

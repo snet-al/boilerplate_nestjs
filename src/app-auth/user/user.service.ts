@@ -7,11 +7,14 @@ import { InjectRepository } from '@nestjs/typeorm'
 import { User, UserStatus } from '../../entities/user.entity'
 import { UsersRoles } from '../../entities/users_roles.entity'
 import { PaginationService } from '../../common/pagination.service'
-import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common'
+import { ExternalUserManagementService } from '../../common/services/external-user-management.service'
+import { BadRequestException, ConflictException, Inject, Injectable, Logger, NotFoundException } from '@nestjs/common'
 import { SignupDto } from '../auth/dto/signup.dto'
 
 @Injectable()
 export class UserService {
+  private readonly logger = new Logger(UserService.name)
+
   @InjectRepository(User)
   private repository: Repository<User>
 
@@ -26,6 +29,9 @@ export class UserService {
 
   @Inject(JwtService)
   private jwtService: JwtService
+
+  @Inject(ExternalUserManagementService)
+  private externalUserService: ExternalUserManagementService
 
   async create(createdUserDto: UserDto) {
     const foundUser = await this.repository.findOne({ where: { email: createdUserDto.email } })
@@ -64,6 +70,7 @@ export class UserService {
     if (existing) {
       throw new ConflictException('This email is already used to register a user!')
     }
+
     const userEntity = this.repository.create({
       email: signupDto.email,
       name: signupDto.name,
@@ -71,7 +78,43 @@ export class UserService {
       status: UserStatus.PENDING,
       isEmailVerified: false,
     })
-    const saved = await this.repository.save(userEntity)
+
+    let saved = await this.repository.save(userEntity)
+    let shouldRollback = false
+
+    try {
+      const externalUserResponse = await this.externalUserService.syncUserWithExternal({
+        id: saved.id,
+        name: saved.name,
+        email: saved.email,
+      })
+
+      saved.externalUserId = externalUserResponse.user_id
+      saved.externalApiKey = externalUserResponse.key
+      saved.externalProvider = 'litellm'
+      saved.externalMetadata = externalUserResponse.metadata
+
+      saved = await this.repository.save(saved)
+      
+      this.logger.log(`Successfully created external user for local user ${saved.id}`)
+    } catch (error) {
+      this.logger.error(`Failed to create external user for local user ${saved.id}: ${error.message}`)
+      
+      const shouldFailOnExternalError = process.env.FAIL_ON_EXTERNAL_USER_ERROR === 'true'
+      if (shouldFailOnExternalError) {
+        this.logger.warn(`Rolling back user creation due to external user failure`)
+        shouldRollback = true
+        await this.repository.delete(saved.id)
+        throw new BadRequestException(`User registration failed: Unable to create external user account`)
+      } else {
+        this.logger.warn(`Continuing with user creation despite external user failure`)
+      }
+    }
+
+    if (shouldRollback) {
+      return null
+    }
+
     return saved
   }
 
@@ -88,6 +131,12 @@ export class UserService {
   }
 
   async remove(id: number) {
+    try {
+      await this.cleanupExternalUser(id)
+    } catch (error) {
+      this.logger.warn(`Failed to cleanup external user before deletion: ${error.message}`)
+    }
+    
     return await this.repository.delete(id)
   }
 
@@ -143,5 +192,77 @@ export class UserService {
 
   async update(id: number, data: any): Promise<UpdateResult> {
     return await this.repository.update({ id }, data)
+  }
+
+  async syncExistingUserWithExternal(userId: number): Promise<boolean> {
+    try {
+      const user = await this.findOne({ id: userId })
+      if (!user) {
+        throw new NotFoundException(`User with ID: ${userId} does not exist!`)
+      }
+
+      if (user.externalUserId) {
+        this.logger.warn(`User ${userId} already has external user ID: ${user.externalUserId}`)
+        return true
+      }
+
+      const externalUserResponse = await this.externalUserService.syncUserWithExternal({
+        id: user.id,
+        name: user.name,
+        email: user.email,
+      })
+
+      await this.repository.update(user.id, {
+        externalUserId: externalUserResponse.user_id,
+        externalApiKey: externalUserResponse.key,
+        externalProvider: 'litellm',
+        externalMetadata: externalUserResponse.metadata,
+      })
+
+      this.logger.log(`Successfully synced existing user ${userId} with external service`)
+      return true
+    } catch (error) {
+      this.logger.error(`Failed to sync user ${userId} with external service: ${error.message}`)
+      return false
+    }
+  }
+
+  async cleanupExternalUser(userId: number): Promise<boolean> {
+    try {
+      const user = await this.findOne({ id: userId })
+      if (!user || !user.externalUserId) {
+        return true
+      }
+
+      const deleted = await this.externalUserService.deleteExternalUser(user.externalUserId)
+      
+      if (deleted) {
+        await this.repository.update(user.id, {
+          externalUserId: null,
+          externalApiKey: null,
+          externalMetadata: null,
+        })
+        this.logger.log(`Successfully cleaned up external user for user ${userId}`)
+      }
+
+      return deleted
+    } catch (error) {
+      this.logger.error(`Failed to cleanup external user for user ${userId}: ${error.message}`)
+      return false
+    }
+  }
+
+  async getExternalUserInfo(userId: number): Promise<any> {
+    try {
+      const user = await this.findOne({ id: userId })
+      if (!user || !user.externalUserId) {
+        return null
+      }
+
+      return await this.externalUserService.getExternalUserInfo(user.externalUserId)
+    } catch (error) {
+      this.logger.error(`Failed to get external user info for user ${userId}: ${error.message}`)
+      return null
+    }
   }
 }

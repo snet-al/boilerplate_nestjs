@@ -1,0 +1,31 @@
+# LiteLLM Configuration
+# This is a basic configuration for LiteLLM proxy server
+
+model_list:
+  # Example model configurations - you can add your actual models here
+  - model_name: gpt-3.5-turbo
+    litellm_params:
+      model: gpt-3.5-turbo
+      api_key: your-openai-key-here
+      
+  - model_name: claude-3-sonnet
+    litellm_params:
+      model: claude-3-sonnet-20240229
+      api_key: your-anthropic-key-here
+
+# Router settings
+router_settings:
+  routing_strategy: simple-shuffle
+
+# General settings
+general_settings:
+  master_key: sk-1234567890abcdef
+  database_url: "sqlite:///litellm.db"
+  store_model_in_db: true
+  
+# Enable UI
+ui:
+  page_title: "LiteLLM Admin UI"
+  
+# Health check settings
+health_check_interval: 300
