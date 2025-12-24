@@ -51,12 +51,12 @@ export class AuthService {
 
     const accessToken = this.jwtService.sign(
       { sub: user.id, email: user.email },
-      { expiresIn: accessExp },
+      { expiresIn: accessExp as any },
     )
 
     const refreshToken = this.jwtService.sign(
       { sub: user.id, email: user.email },
-      { expiresIn: refreshExp },
+      { expiresIn: refreshExp as any },
     )
     const updatedToken = await this.updateRefreshToken(refreshToken, user.id)
 
@@ -111,12 +111,12 @@ export class AuthService {
 
     const accessToken = this.jwtService.sign(
       { sub: user.id, email: user.email },
-      { expiresIn: accessExp },
+      { expiresIn: accessExp as any },
     )
 
     const refreshToken = this.jwtService.sign(
       { sub: user.id, email: user.email },
-      { expiresIn: refreshExp },
+      { expiresIn: refreshExp as any },
     )
     const updatedToken = await this.updateRefreshToken(refreshToken, user.id)
 
@@ -219,7 +219,7 @@ export class AuthService {
   getAccessToken(payload: TokenPayloadDto) {
     // Use JwtModule default secret; control expiration with sane default
     const accessExp = (process.env.JWT_ACCESS_TOKEN_EXPIRATION || '1d').trim()
-    return this.jwtService.sign(payload, { expiresIn: accessExp })
+    return this.jwtService.sign(payload, { expiresIn: accessExp as any })
   }
 
   verifyAndDecodeToken(token: string) {
