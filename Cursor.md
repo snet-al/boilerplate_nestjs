@@ -48,7 +48,7 @@ src/
 
 ### Module Organization
 
-- **App Modules** (`app-*` folders): Feature-based modules that group related functionality
+- **App Modules** (`app-*` folders): micro-backend-based modules that group related functionality
 - **Common** (`common/`): Shared utilities, services, guards, filters, and DTOs used across modules
 - **Entities** (`entities/`): TypeORM database entity definitions
 - **Middleware** (`middleware/`): Express middleware functions
@@ -56,7 +56,7 @@ src/
 
 ### Key Principles
 
-- **Modularity**: Each feature domain is a separate `app-*` module
+- **Modularity**: Each micro-backend is a separate `app-*` module
 - **Consistency**: All API controllers extend `BaseController` for standardized responses
 - **Reusability**: Shared code goes in `common/`
 - **Type Safety**: Use TypeORM entities, DTOs with validation, and find-or-fail pipes
