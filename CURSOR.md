@@ -48,10 +48,232 @@ src/
 
 ### Module Organization
 
-- **App Modules** (`app-*` folders): Apps are the top level modules that group together a set of domain level modules, and are the smallest deployable unit that if separated by other apps (micro-apps) can still function. Example: `app-auth` or `app-documents`
+- **App Modules** (`app-*` folders): Apps are the top level modules that group together a set of domain level modules, and are the smallest deployable unit that if separated by other apps (micro-apps) can still function. Example: `app-auth`, `app-documents`, or `app-applications`
+- **CRUD Modules** (inside `app-*` folders): Every CRUD inside an `app-{appName}` is the second level of modules and the lowest level. These are domain-specific modules that handle specific resources (e.g., `application`, `user`, `document`)
 - **Entities** (`entities/`): TypeORM database entity definitions. Grouping entities in a single place and not in every nest module helps separate the bindings between modules
 - **Middleware** (`middleware/`): Express middleware functions
 - **Migrations** (`migrations/`): TypeORM database migration files
+
+### App Module Structure Example
+
+Here's an example of an app module (`app-applications`) with a CRUD module (`application`):
+
+**App Module Structure:**
+```
+app-applications/
+├── application/              # CRUD module (second level, lowest level)
+│   ├── dtos/                 # Data Transfer Objects
+│   │   ├── create-application.dto.ts
+│   │   ├── update-application.dto.ts
+│   │   ├── assign-application.dto.ts
+│   │   └── update-status.dto.ts
+│   ├── pipe/                 # Custom pipes (optional)
+│   ├── application.controller.ts
+│   ├── application.service.ts
+│   └── application.module.ts
+├── application-phase/        # Another CRUD module
+└── app-applications.module.ts # App-level module
+```
+
+**Example CRUD Module: `application`**
+
+**Entity** (`src/entities/application.entity.ts`):
+```ts
+import { Entity, Column } from 'typeorm'
+import { BasicEntity } from './basic.entity'
+
+@Entity('applications')
+export class Application extends BasicEntity {
+  @Column({ name: 'name', type: 'varchar' })
+  name: string
+
+  @Column({ name: 'status', type: 'varchar', default: 'pending' })
+  status: string
+
+  @Column({ name: 'user_id', type: 'integer' })
+  userId: number
+
+  @Column({ name: 'description', type: 'text', nullable: true })
+  description?: string
+
+  public get baseGroup() {
+    return {
+      id: this.id,
+      name: this.name,
+      status: this.status,
+      userId: this.userId,
+    }
+  }
+
+  public get toResponse() {
+    return {
+      ...this.baseGroup,
+      description: this.description,
+      createdAt: this.createdAt,
+      updatedAt: this.updatedAt,
+    }
+  }
+}
+```
+
+**DTOs** (`src/app-applications/application/dtos/`):
+
+`create-application.dto.ts`:
+```ts
+import { ApiProperty } from '@nestjs/swagger'
+import { IsString, IsNotEmpty, IsOptional } from 'class-validator'
+
+export class CreateApplicationDto {
+  @ApiProperty()
+  @IsString()
+  @IsNotEmpty()
+  name: string
+
+  @ApiProperty({ required: false })
+  @IsString()
+  @IsOptional()
+  description?: string
+}
+```
+
+`update-application.dto.ts`:
+```ts
+import { ApiProperty } from '@nestjs/swagger'
+import { IsString, IsOptional } from 'class-validator'
+
+export class UpdateApplicationDto {
+  @ApiProperty({ required: false })
+  @IsString()
+  @IsOptional()
+  name?: string
+
+  @ApiProperty({ required: false })
+  @IsString()
+  @IsOptional()
+  description?: string
+}
+```
+
+**Service** (`src/app-applications/application/application.service.ts`):
+```ts
+import { Inject, Injectable } from '@nestjs/common'
+import { InjectRepository } from '@nestjs/typeorm'
+import { Repository } from 'typeorm'
+import { Application } from '../../../entities/application.entity'
+import { PaginationService } from '../../../common/pagination.service'
+import { CreateApplicationDto } from './dtos/create-application.dto'
+import { UpdateApplicationDto } from './dtos/update-application.dto'
+
+@Injectable()
+export class ApplicationService {
+  @Inject(PaginationService)
+  private pagination: PaginationService
+
+  @InjectRepository(Application)
+  private repo: Repository<Application>
+
+  async findAll(req: any) {
+    const qb = this.repo.createQueryBuilder('application')
+    await this.pagination.paginateQueryBuilder(qb, req)
+    return qb.getManyAndCount()
+  }
+
+  async create(dto: CreateApplicationDto) {
+    const entity = this.repo.create(dto)
+    return this.repo.save(entity)
+  }
+
+  async update(application: Application, dto: UpdateApplicationDto) {
+    const merged = this.repo.merge(application, dto)
+    return this.repo.save(merged)
+  }
+}
+```
+
+**Controller** (`src/app-applications/application/application.controller.ts`):
+```ts
+import { Controller, Get, Post, Put, Body, Param, ParseIntPipe, Res, Req, Inject, UseGuards } from '@nestjs/common'
+import { ApiBearerAuth, ApiExtraModels, ApiOperation, ApiTags } from '@nestjs/swagger'
+import { Response } from 'express'
+import { BaseController } from '../../app-api/base.controller'
+import { ApplicationService } from './application.service'
+import { CreateApplicationDto } from './dtos/create-application.dto'
+import { UpdateApplicationDto } from './dtos/update-application.dto'
+import { FindApplicationOrFailPipeService } from './pipe/find-application-or-fail-pipe.service'
+import { ApiPaginateDto, ApiPaginateObjDto, ResponsePaginationDto, ResponsePaginationObjDto } from '../../../common/dto/pagination.dto'
+import { Application } from '../../../entities/application.entity'
+import { JwtAuthGuard } from '../../app-auth/guards/jwt-auth.guard'
+
+@ApiTags('Applications')
+@ApiBearerAuth()
+@Controller('applications')
+@ApiExtraModels(ResponsePaginationDto, ResponsePaginationObjDto, CreateApplicationDto, UpdateApplicationDto)
+export class ApplicationController extends BaseController {
+  @Inject(ApplicationService)
+  private service: ApplicationService
+
+  @Get()
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'List applications' })
+  @ApiPaginateDto({ status: 200, description: 'All applications', type: Object })
+  async findAll(@Req() req, @Res() res: Response) {
+    try {
+      const data = await this.service.findAll(req)
+      return this.success(res, data)
+    } catch (e) {
+      return this.error(res, e.message)
+    }
+  }
+
+  @Post()
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Create application' })
+  @ApiPaginateObjDto({ status: 200, description: 'Created', type: Object })
+  async create(@Body() dto: CreateApplicationDto, @Res() res: Response) {
+    try {
+      const application = await this.service.create(dto)
+      return this.success(res, application)
+    } catch (e) {
+      return this.error(res, e.message)
+    }
+  }
+
+  @Put(':id')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Update application' })
+  @ApiPaginateObjDto({ status: 200, description: 'Updated', type: Object })
+  async update(
+    @Param('id', ParseIntPipe, FindApplicationOrFailPipeService) application: Application,
+    @Body() dto: UpdateApplicationDto,
+    @Res() res: Response,
+  ) {
+    try {
+      const updated = await this.service.update(application, dto)
+      return this.success(res, updated)
+    } catch (e) {
+      return this.error(res, e.message)
+    }
+  }
+}
+```
+
+**Module** (`src/app-applications/application/application.module.ts`):
+```ts
+import { Module } from '@nestjs/common'
+import { TypeOrmModule } from '@nestjs/typeorm'
+import { Application } from '../../../entities/application.entity'
+import { ApplicationService } from './application.service'
+import { ApplicationController } from './application.controller'
+import { PaginationService } from '../../../common/pagination.service'
+import { FindApplicationOrFailPipeService } from './pipe/find-application-or-fail-pipe.service'
+
+@Module({
+  imports: [TypeOrmModule.forFeature([Application])],
+  controllers: [ApplicationController],
+  providers: [ApplicationService, PaginationService, FindApplicationOrFailPipeService],
+})
+export class ApplicationModule {}
+```
 
 ### Key Principles
 
