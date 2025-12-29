@@ -107,28 +107,10 @@ For entity examples, refer to existing entities in the codebase:
 
 ### Relationships
 
-**Many-to-One Pattern:**
-```ts
-@Column({ name: 'user_id', type: 'integer' })
-userId: number
-
-@ManyToOne(() => User)
-@JoinColumn({ name: 'user_id' })
-user: User
-```
-
-**One-to-Many:**
-```ts
-@OneToMany(() => ChildEntity, child => child.parent)
-children: ChildEntity[]
-```
-
-**Many-to-Many:**
-```ts
-@ManyToMany(() => Role, role => role.users)
-@JoinTable({ name: 'users_roles' })
-roles: Role[]
-```
+For relationship examples, refer to existing entities:
+- **Many-to-One**: `src/entities/file.entity.ts` (File → Document), `src/entities/users_roles.entity.ts` (UsersRoles → User, UsersRoles → Role)
+- **One-to-Many**: `src/entities/document.entity.ts` (Document → File), `src/entities/file.entity.ts` (File → Attachment)
+- **Many-to-Many**: `src/entities/users_roles.entity.ts` (intermediate entity pattern)
 
 ### Response Getters
 
@@ -141,24 +123,11 @@ roles: Role[]
 Common TypeORM column types: `varchar`, `text`, `integer`, `decimal`, `float`, `boolean`, `date`, `datetime`, `timestamp`, `json`, `enum`
 
 **Enum Example:**
-```ts
-// Define enum separately
-export enum ProjectStatus {
-  ACTIVE = 'active',
-  INACTIVE = 'inactive',
-  ARCHIVED = 'archived',
-}
-
-// Use in entity
-@Column({ name: 'status', type: 'varchar', default: ProjectStatus.ACTIVE })
-status: ProjectStatus
-```
+- See `src/entities/document.entity.ts` for `DocumentStatus` enum usage
+- See `src/entities/file.entity.ts` for enum examples
 
 **JSON Column Example:**
-```ts
-@Column({ name: 'metadata', type: 'json', nullable: true })
-metadata?: Record<string, any>
-```
+- See `src/entities/file.entity.ts` for `data` column with `simple-json` type
 
 ### Important Entity Guidelines
 
@@ -188,22 +157,10 @@ metadata?: Record<string, any>
 
 ### Migration File Template
 
-```ts
-import { MigrationInterface, QueryRunner } from "typeorm"
-
-export class AddExampleFields1234567890123 implements MigrationInterface {
-    name = 'AddExampleFields1234567890123'
-
-    public async up(queryRunner: QueryRunner): Promise<void> {
-        // Forward migration: create tables, columns, indexes, add data
-    }
-
-    public async down(queryRunner: QueryRunner): Promise<void> {
-        // Reverse migration: drop tables, columns, indexes, remove data
-        // Must perfectly reverse everything done in up()
-    }
-}
-```
+For migration examples, refer to existing migration files in `src/migrations/`:
+- `1673456789123-AddExternalUserFields.ts` - Example of adding columns
+- `1679999999999-CreateApiKeys.ts` - Example of creating tables
+- `1725530000000-CreateUserBudget.ts` - Another table creation example
 
 **Key Requirements:**
 - Class name format: `<DescriptiveName><Timestamp>` (PascalCase)
@@ -260,16 +217,8 @@ For list endpoints, returning `[rows, total]` (e.g., TypeORM `findAndCount()` or
 - `page` (default 1), `pageSize` (default 20), `sortBy`, `sortOrder` (default `ASC`)
 
 **Usage in services:**
-```ts
-@Inject(PaginationService)
-private pagination: PaginationService
-
-async findAll(req: any) {
-  const qb = this.repo.createQueryBuilder('entity')
-  await this.pagination.paginateQueryBuilder(qb, req)
-  return qb.getManyAndCount() // [entities, total]
-}
-```
+- See `src/app-api/client/client.service.ts` for PaginationService usage with QueryBuilder
+- See `src/app-api/keys/keys.service.ts` for pagination examples
 
 **Why:** This keeps pagination consistent and keeps controllers/services focused on business logic.
 
@@ -278,9 +227,8 @@ async findAll(req: any) {
 For each entity, create a `Find<Entity>OrFailPipeService` pipe under the feature folder.
 
 **Usage in controllers:**
-```ts
-@Param('id', ParseIntPipe, FindClientOrFailPipeService) client: Client
-```
+- See `src/app-api/client/client.controller.ts` for usage examples
+- See `src/app-api/client/pipe/find-client-or-fail-pipe.service.ts` for pipe implementation
 
 Transforms `:id` params directly into loaded entities and throws `NotFoundException` if missing.
 
@@ -313,16 +261,8 @@ Controllers often return `entity.baseGroup` or `entity.toResponse` through `Base
 Services and controllers commonly use `@Inject()`/`@InjectRepository()` property injection instead of constructor injection.
 
 **Example:**
-```ts
-@Injectable()
-export class ExampleService {
-  @Inject(PaginationService)
-  private pagination: PaginationService
-
-  @InjectRepository(Entity)
-  private repo: Repository<Entity>
-}
-```
+- See `src/app-api/client/client.service.ts` for property injection pattern
+- See `src/app-api/keys/keys.service.ts` for another example
 
 **Why:** A project style choice that keeps constructors minimal and mirrors Angular-like patterns.
 
@@ -364,39 +304,7 @@ Root module registers TypeORM: `TypeOrmModule.forRoot(ormconfiguration)` in `src
 **Why:** Environment-driven config supports multiple DB engines and flexible build setups.
 
 **Complete file upload setup:**
-```ts
-import { FileInterceptor } from '@nestjs/platform-express'
-import { diskStorage } from 'multer'
-import { v4 as uuidv4 } from 'uuid'
-import path = require('path')
-
-const storage = {
-  storage: diskStorage({
-    destination: './public/uploads',
-    filename: (req, file, cb) => {
-      const filename: string = path.parse(file.originalname).name.replace(/\s/g, '') + uuidv4()
-      const extension: string = path.parse(file.originalname).ext
-      cb(null, `${filename}${extension}`)
-    },
-  }),
-}
-
-@Post()
-@UseInterceptors(FileInterceptor('file', storage))
-@ApiConsumes('multipart/form-data')
-@ApiBody({
-  schema: {
-    type: 'object',
-    properties: {
-      file: { type: 'string', format: 'binary' },
-      fileId: { type: 'number' },
-    },
-  },
-})
-async upload(@UploadedFile() file: Express.Multer.File, @Body() dto: CreateDto) {
-  // file.path, file.filename, file.originalname available
-}
-```
+- See `src/app-documents/document/documents.controller.ts` for complete file upload implementation with `FileInterceptor`, `diskStorage`, and Swagger documentation
 
 **Notes:**
 - Files are stored in `public/uploads/` directory
@@ -417,47 +325,12 @@ async upload(@UploadedFile() file: Express.Multer.File, @Body() dto: CreateDto) 
 DTOs should use `class-validator` decorators for validation. Use `ValidationPipe` in controllers with appropriate options.
 
 **Common validation decorators:**
-```ts
-import { IsEmail, IsNotEmpty, IsOptional, IsString, IsNumber, IsArray, MinLength, MaxLength } from 'class-validator'
-import { Type } from 'class-transformer'
-
-export class CreateUserDto {
-  @IsEmail()
-  @IsNotEmpty()
-  email: string
-
-  @IsString()
-  @MinLength(6)
-  password: string
-
-  @IsOptional()
-  @IsString()
-  name?: string
-
-  @IsNumber()
-  @Type(() => Number)
-  age: number
-}
-```
+- See `src/app-auth/user/dto/create-user.dto.ts` for validation decorator examples
+- See `src/app-api/client/dto/create-client.dto.ts` for DTO validation patterns
 
 **ValidationPipe usage in controllers:**
-```ts
-import { ValidationPipe } from '@nestjs/common'
-
-// Method-level (recommended)
-@Post()
-@UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
-async create(@Body() dto: CreateDto) { }
-
-// Parameter-level
-@Post()
-async create(@Body(ValidationPipe) dto: CreateDto) { }
-
-// Controller-level
-@Controller('resource')
-@UsePipes(new ValidationPipe({ transform: true, forbidNonWhitelisted: true }))
-export class ResourceController { }
-```
+- See `src/app-api/client/client.controller.ts` for ValidationPipe usage examples
+- See `src/app-auth/auth/auth.controller.ts` for controller-level validation patterns
 
 **ValidationPipe options:**
 - `transform: true` - Automatically transform payloads to DTO instances
@@ -467,106 +340,19 @@ export class ResourceController { }
 ### 9. Logger Usage
 
 Use NestJS `Logger` in services for consistent logging:
-
-```ts
-import { Injectable, Logger } from '@nestjs/common'
-
-@Injectable()
-export class ExampleService {
-  private readonly logger = new Logger(ExampleService.name)
-
-  async doWork() {
-    this.logger.log('Processing started')
-    this.logger.debug('Debug information')
-    this.logger.warn('Warning message')
-    this.logger.error('Error occurred', error.stack)
-  }
-}
-```
+- See `src/app-api/client/client.service.ts` for Logger usage examples
+- See `src/common/services/external-user-management.service.ts` for logging patterns
 
 ### 11. ConfigService for Environment Variables
 
 Use `ConfigService` to access environment variables:
-
-```ts
-import { Injectable } from '@nestjs/common'
-import { ConfigService } from '@nestjs/config'
-
-@Injectable()
-export class ExampleService {
-  constructor(private readonly config: ConfigService) {}
-
-  getValue() {
-    // With default value
-    const value = this.config.get<string>('KEY_NAME', 'default')
-    
-    // Type-safe
-    const port = this.config.get<number>('PORT')
-    
-    // Required (throws if missing)
-    const required = this.config.getOrThrow<string>('REQUIRED_KEY')
-  }
-}
-```
+- See `src/common/services/external-user-management.service.ts` for ConfigService usage examples
+- See `src/app.module.ts` for MailerModule configuration using environment variables
 
 ### 12. External API Client Pattern
 
 For external API integrations, use `HttpService` from `@nestjs/axios`:
-
-```ts
-import { Injectable, Logger } from '@nestjs/common'
-import { HttpService } from '@nestjs/axios'
-import { ConfigService } from '@nestjs/config'
-import { firstValueFrom } from 'rxjs'
-
-@Injectable()
-export class ExternalApiService {
-  private readonly logger = new Logger(ExternalApiService.name)
-  private readonly baseUrl: string
-  private readonly apiKey: string
-
-  constructor(
-    private readonly http: HttpService,
-    private readonly config: ConfigService,
-  ) {
-    this.baseUrl = this.config.get<string>('EXTERNAL_API_URL') || 'http://localhost:4000'
-    this.apiKey = this.config.get<string>('EXTERNAL_API_KEY') || ''
-  }
-
-  private authHeaders() {
-    return {
-      'Authorization': `Bearer ${this.apiKey}`,
-      'Content-Type': 'application/json',
-    }
-  }
-
-  async callExternalApi(data: any) {
-    try {
-      const response = await firstValueFrom(
-        this.http.post(`${this.baseUrl}/endpoint`, data, {
-          headers: this.authHeaders(),
-        })
-      )
-      return response.data
-    } catch (error) {
-      this.logger.error(`External API call failed: ${error.message}`)
-      throw error
-    }
-  }
-}
-```
-
-**Module setup:**
-```ts
-import { HttpModule } from '@nestjs/axios'
-
-@Module({
-  imports: [HttpModule, ConfigModule],
-  providers: [ExternalApiService],
-  exports: [ExternalApiService],
-})
-export class ExternalApiModule {}
-```
+- See `src/common/services/external-user-management.service.ts` for complete external API integration example with `HttpService`, `ConfigService`, error handling, and transaction rollback patterns
 
 ### 13. Email Templates with Handlebars
 
@@ -575,36 +361,12 @@ The project uses Handlebars templates for emails via `@nestjs-modules/mailer`:
 **Template location:** `templates/email/<template-name>.hbs`
 
 **Template example:**
-```hbs
-<div style="font-family: Arial, sans-serif;">
-  <h2>Hello {{name}},</h2>
-  <p>{{message}}</p>
-  <a href="{{link}}">Click here</a>
-</div>
-```
+- See `src/templates/email/sample.hbs` or `templates/email/password-reset.hbs` for Handlebars template examples
 
 **Sending emails:**
-```ts
-import { MailerService } from '@nestjs-modules/mailer'
-
-@Injectable()
-export class EmailService {
-  constructor(private readonly mailerService: MailerService) {}
-
-  async sendEmail(to: string, template: string, context: any) {
-    await this.mailerService.sendMail({
-      to,
-      subject: 'Email Subject',
-      template: `./templates/email/${template}`, // or just template name
-      context: {
-        name: 'John Doe',
-        link: 'https://example.com',
-        ...context,
-      },
-    })
-  }
-}
-```
+- See `src/app-jobs/jobs.service.ts` for MailerService usage example
+- See `src/app-auth/auth/auth.service.ts` for email sending patterns in authentication flows
+- See `src/app.module.ts` for MailerModule configuration
 
 **MailerModule is configured in `app.module.ts`** - templates are in `templates/email/` directory.
 
@@ -613,143 +375,38 @@ export class EmailService {
 Since `BasicEntity` includes `deletedAt`, entities support soft deletes:
 
 **Soft delete:**
-```ts
-// In service
-async remove(entity: Entity) {
-  return this.repo.softDelete(entity.id) // Sets deletedAt timestamp
-}
-```
+- See `src/app-api/client/client.service.ts` for `softRemove()` usage examples
 
 **Querying with soft deletes:**
-```ts
-// Excludes soft-deleted by default
-const active = await this.repo.findOne({ where: { id } })
-
-// Include soft-deleted
-const all = await this.repo.findOne({ 
-  where: { id },
-  withDeleted: true 
-})
-
-// Only soft-deleted
-const deleted = await this.repo.find({ 
-  withDeleted: true,
-  where: { deletedAt: Not(IsNull()) }
-})
-
-// Restore soft-deleted
-await this.repo.restore(id)
-```
+- See existing services for examples of querying with `withDeleted: true` option
+- TypeORM automatically excludes soft-deleted records by default
 
 ### 15. QueryBuilder with Relations
 
 Use `leftJoinAndSelect` or `innerJoinAndSelect` to load relations:
-
-```ts
-async findAll() {
-  const qb = this.repo
-    .createQueryBuilder('entity')
-    .leftJoinAndSelect('entity.relation', 'relation')
-    .leftJoinAndSelect('relation.nestedRelation', 'nested')
-    .where('entity.status = :status', { status: 'active' })
-  
-  return qb.getManyAndCount()
-}
-```
+- See `src/app-documents/groups/pipe/find-group-or-fail-pipe.service.ts` for QueryBuilder with relations example
+- See `src/app-api/client/client.service.ts` for QueryBuilder usage patterns
 
 ### 16. Service Return Format Variations
 
-**Option A: Tuple format (recommended for BaseController):**
-```ts
-async findAll() {
-  const [items, total] = await this.repo.findAndCount()
-  return [items, total] // BaseController auto-detects and sets meta.total
-}
-```
-
-**When mapping is needed, map then return tuple:**
-```ts
-async findAll() {
-  const results = await this.repo.getManyAndCount()
-  const items = results[0].map((item) => item.baseGroup) // Map entities to response format
-  const total = results[1] || 0
-  return [items, total] // Return tuple format even after mapping
-}
-```
+**Tuple format (recommended for BaseController):**
+- See `src/app-api/client/client.service.ts` for tuple format `[items, total]` return examples
+- See `src/app-api/keys/keys.service.ts` for service return format patterns
 
 **Note:** BaseController automatically handles tuple format `[items, total]`. If you need to map/transform items, map them first, then return as tuple `[mappedItems, total]`. This keeps the response format consistent.
 
 ### 17. HTTP Exceptions
 
 Use appropriate HTTP exceptions for error handling:
-
-```ts
-import { 
-  BadRequestException, 
-  UnauthorizedException, 
-  ForbiddenException, 
-  NotFoundException, 
-  ConflictException,
-  HttpException,
-  HttpStatus 
-} from '@nestjs/common'
-
-// In services
-if (!entity) {
-  throw new NotFoundException(`Entity ${id} not found`)
-}
-
-if (existing) {
-  throw new ConflictException('Email already exists')
-}
-
-if (!authorized) {
-  throw new ForbiddenException('Insufficient permissions')
-}
-
-// Custom exception
-throw new HttpException('Custom message', HttpStatus.BAD_REQUEST)
-```
+- See `src/app-api/client/pipe/find-client-or-fail-pipe.service.ts` for `NotFoundException` usage
+- See `src/app-auth/auth/auth.service.ts` for various HTTP exception patterns (`ConflictException`, `UnauthorizedException`, etc.)
+- See `src/app-auth/guards/jwt-auth.guard.ts` for guard exception handling
 
 ### 18. Cron Jobs Pattern
 
 For scheduled tasks, use `@nestjs/schedule`:
-
-```ts
-import { Injectable } from '@nestjs/common'
-import { Cron, Interval } from '@nestjs/schedule'
-
-@Injectable()
-export class JobsService {
-  // Cron expression: second minute hour day month dayOfWeek
-  @Cron('0 0 8 * * *') // Every day at 8:00 AM
-  async dailyTask() {
-    // Task logic
-  }
-
-  @Cron('0 */30 * * * *') // Every 30 minutes
-  async periodicTask() {
-    // Task logic
-  }
-
-  // Interval in milliseconds
-  @Interval(60000) // Every 60 seconds
-  async intervalTask() {
-    // Task logic
-  }
-}
-```
-
-**Module setup:**
-```ts
-import { ScheduleModule } from '@nestjs/schedule'
-
-@Module({
-  imports: [ScheduleModule.forRoot()],
-  providers: [JobsService],
-})
-export class JobsModule {}
-```
+- See `src/app-jobs/jobs.service.ts` for `@Cron` and `@Interval` decorator usage examples
+- See `src/app-jobs/app-jobs.module.ts` for `ScheduleModule.forRoot()` configuration
 
 ### 19. Code Organization Within Modules
 
@@ -882,15 +539,7 @@ This micro-app is different from the general structure. It's not based on the cl
 - `ForbiddenException` for authorization failures
 
 **RateLimitGuard Usage:**
-```ts
-import { RateLimitGuard } from '../../app-auth/guards/rate-limit.guard'
-
-@Post('refresh')
-@UseGuards(JwtAuthGuard, RateLimitGuard)
-async refreshToken() {
-  // Rate limited endpoint
-}
-```
+- See `src/app-auth/auth/auth.controller.ts` for RateLimitGuard usage examples with `@UseGuards()`
 
 **Note:** RateLimitGuard is configured with max requests per window. Check `src/app-auth/guards/rate-limit.guard.ts` for current settings.
 
@@ -911,16 +560,8 @@ Auth endpoints are in `src/app-auth/auth/auth.controller.ts` and implemented in 
 
 ### Protecting Endpoints
 
-```ts
-@Get()
-@UseGuards(JwtAuthGuard)
-@ApiBearerAuth()
-@ApiOperation({ summary: 'Protected endpoint' })
-async protectedEndpoint(@Req() req, @Res() res: Response) {
-  // Access current user via req.user
-  return this.success(res, req.user)
-}
-```
+- See `src/app-api/client/client.controller.ts` for examples of protected endpoints with `@UseGuards(JwtAuthGuard)` and `@ApiBearerAuth()`
+- See `src/app-auth/auth/auth.controller.ts` for authentication endpoint patterns
 
 ### MDC (Mapped Diagnostic Context) / Request Correlation
 
@@ -998,22 +639,8 @@ export class MdcLogger extends Logger {
 ```
 
 **Usage:**
-```ts
-import { Inject } from '@nestjs/common'
-import { MdcService } from '../common/mdc/mdc.service'
-import { MdcLogger } from '../common/mdc/mdc.logger'
-
-export class ExampleService {
-  @Inject(MdcService)
-  private mdc: MdcService
-
-  private readonly logger = new MdcLogger(this.mdc, ExampleService.name)
-
-  doWork() {
-    this.logger.log('processing started')
-  }
-}
-```
+- See `src/common/mdc/` folder for complete MDC implementation (constants, service, middleware, logger)
+- Refer to existing services for usage patterns if MDC is implemented
 
 **Notes:**
 - This keeps a per-request context for any logging call inside the request lifecycle.
@@ -1106,26 +733,8 @@ npx @nestjs/cli resource resourceName --no-spec
 - Use test database for E2E tests
 
 **Test Structure Example:**
-```ts
-import { Test, TestingModule } from '@nestjs/testing'
-import { ProjectService } from './project.service'
-
-describe('ProjectService', () => {
-  let service: ProjectService
-
-  beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [ProjectService],
-    }).compile()
-
-    service = module.get<ProjectService>(ProjectService)
-  })
-
-  it('should be defined', () => {
-    expect(service).toBeDefined()
-  })
-})
-```
+- See `test/app.e2e-spec.ts` for E2E test structure
+- Follow NestJS testing documentation for unit test patterns with `@nestjs/testing`
 
 ---
 
