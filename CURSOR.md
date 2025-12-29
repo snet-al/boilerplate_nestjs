@@ -35,7 +35,7 @@ src/
 ├── app-budget/         # User budget management module
 ├── app-documents/      # Document management module (files, attachments, groups)
 ├── app-jobs/           # Background jobs and scheduled tasks module
-├── common/             # Shared utilities, services, guards, filters
+├── common/             # Shared utilities, services, filters
 ├── entities/           # TypeORM entity definitions
 ├── middleware/         # Express middleware
 ├── migrations/         # Database migrations
@@ -48,17 +48,15 @@ src/
 
 ### Module Organization
 
-- **App Modules** (`app-*` folders): micro-backend-based modules that group related functionality
-- **Common** (`common/`): Shared utilities, services, guards, filters, and DTOs used across modules
-- **Entities** (`entities/`): TypeORM database entity definitions
+- **App Modules** (`app-*` folders): Apps are the top level modules that group together a set of domain level modules, and are the smallest deployable unit that if separated by other apps (micro-apps) can still function. Example: `app-auth` or `app-documents`
+- **Entities** (`entities/`): TypeORM database entity definitions. Grouping entities in a single place and not in every nest module helps separate the bindings between modules
 - **Middleware** (`middleware/`): Express middleware functions
 - **Migrations** (`migrations/`): TypeORM database migration files
 
 ### Key Principles
 
-- **Modularity**: Each micro-backend is a separate `app-*` module
+- **Modularity**: Each micro-app is a separate `app-*` module (the smallest possible deployable unit)
 - **Consistency**: All API controllers extend `BaseController` for standardized responses
-- **Reusability**: Shared code goes in `common/`
 - **Type Safety**: Use TypeORM entities, DTOs with validation, and find-or-fail pipes
 - **Documentation**: All DTOs use `@ApiProperty()` for Swagger
 
@@ -1133,29 +1131,29 @@ app-api/
 - Sync with external systems when creating users when applicable
 - Handle external user creation failures gracefully (see `user.service.ts` for rollback pattern)
 
-### Common Module (`common/`)
+### Shared Utilities and Services (`common/`)
 
-**When to Add Code to Common:**
+**When to Add Code to Shared Folder:**
 - Code is used by 2+ app modules
 - Code provides cross-cutting concerns (logging, validation, etc.)
 - Code implements shared utilities or helpers
 
-**Don't add to common when:**
+**Don't add to shared folder when:**
 - Code is specific to one module (keep it in that module)
 - Code is a one-off utility (consider if it will be reused)
 
-**CommonModule Configuration:**
+**Shared Module Configuration:**
 - Add services to both `providers` and `exports` if they should be used by other modules
-- Add services only to `providers` if they're internal to CommonModule
-- Import `CommonModule` in app modules where shared services are needed
+- Add services only to `providers` if they're internal to the shared module
+- Import the shared module in app modules where shared services are needed
 - Only export what other modules actually need - keep exports minimal
 
 **Avoiding Circular Dependencies:**
 - Design module boundaries carefully to avoid circular imports
-- Only export what other modules need from `CommonModule`
+- Only export what other modules need from shared modules
 - Each `app-*.module.ts` imports its feature modules
 - Root module (`app.module.ts`) imports all `App*Module` classes
-- If a circular dependency occurs, refactor shared code to `common/` or create an intermediate module
+- If a circular dependency occurs, refactor shared code to the shared folder or create an intermediate module
 
 ### App Jobs Module (`app-jobs/`)
 
@@ -1182,7 +1180,9 @@ This micro-app is different from the general structure. It's not based on the cl
 - Use async/await and handle errors with try-catch for async operations
 - Each middleware should have a single responsibility
 
-### Guards (`common/guards/`)
+### Guards
+
+**Location:** Guards are located in `src/app-auth/guards/`.
 
 **Creating Guards:**
 - Implement `CanActivate` interface
@@ -1196,7 +1196,7 @@ This micro-app is different from the general structure. It's not based on the cl
 
 **RateLimitGuard Usage:**
 ```ts
-import { RateLimitGuard } from '../../common/guards/rate-limit.guard'
+import { RateLimitGuard } from '../../app-auth/guards/rate-limit.guard'
 
 @Post('refresh')
 @UseGuards(JwtAuthGuard, RateLimitGuard)
@@ -1205,7 +1205,7 @@ async refreshToken() {
 }
 ```
 
-**Note:** RateLimitGuard is configured with max requests per window. Check `src/common/guards/rate-limit.guard.ts` for current settings.
+**Note:** RateLimitGuard is configured with max requests per window. Check `src/app-auth/guards/rate-limit.guard.ts` for current settings.
 
 ---
 
