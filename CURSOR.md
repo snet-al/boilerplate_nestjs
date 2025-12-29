@@ -23,7 +23,7 @@ This is a comprehensive guide for AI assistants working on this NestJS boilerpla
 
 ### Architecture Pattern
 
-This NestJS application uses a **micro backend architecture** where each functional domain is organized as a separate module (indicated by `app-*` prefixes).
+This NestJS application uses a **micro backend architecture** where each functional domain is organized as a separate module (indicated by `app-*` prefixes). This is an example of how the architecture is structured.
 
 ### Directory Structure
 
@@ -55,7 +55,7 @@ src/
 
 ### Key Principles
 
-- **Modularity**: Each micro-app is a separate `app-*` module (the smallest possible deployable unit)
+- **Modularity**: Each micro-app is a separate `app-*` module (the smallest possible deployable unit). Every CRUD inside an `app-{appName}` is the second level of modules and the lowest level.
 - **Consistency**: All API controllers extend `BaseController` for standardized responses
 - **Type Safety**: Use TypeORM entities, DTOs with validation, and find-or-fail pipes
 - **Documentation**: All DTOs use `@ApiProperty()` for Swagger
