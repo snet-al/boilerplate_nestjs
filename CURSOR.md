@@ -312,7 +312,7 @@ Root module registers TypeORM: `TypeOrmModule.forRoot(ormconfiguration)` in `src
 - Use `uuid` to generate unique filenames
 - Access uploaded file via `@UploadedFile()` decorator
 
-### 7. Module Naming Conventions
+### 11. Module Naming Conventions
 
 - **App modules**: Use `app-<name>` format (e.g., `app-auth`, `app-api`)
 - **Feature modules**: Use descriptive names (e.g., `auth.module.ts`, `user.module.ts`)
@@ -320,7 +320,7 @@ Root module registers TypeORM: `TypeOrmModule.forRoot(ormconfiguration)` in `src
 - **Controllers**: `<name>.controller.ts` (plural for resource controllers)
 - **DTOs**: Place in `dto/` subfolder with descriptive names (e.g., `create-user.dto.ts`)
 
-### 8. DTO Validation with ValidationPipe
+### 12. DTO Validation with ValidationPipe
 
 DTOs should use `class-validator` decorators for validation. Use `ValidationPipe` in controllers with appropriate options.
 
@@ -337,24 +337,24 @@ DTOs should use `class-validator` decorators for validation. Use `ValidationPipe
 - `whitelist: true` - Strip properties that don't have decorators
 - `forbidNonWhitelisted: true` - Throw error if non-whitelisted properties exist
 
-### 9. Logger Usage
+### 13. Logger Usage
 
 Use NestJS `Logger` in services for consistent logging:
 - See `src/app-api/client/client.service.ts` for Logger usage examples
 - See `src/common/services/external-user-management.service.ts` for logging patterns
 
-### 11. ConfigService for Environment Variables
+### 14. ConfigService for Environment Variables
 
 Use `ConfigService` to access environment variables:
 - See `src/common/services/external-user-management.service.ts` for ConfigService usage examples
 - See `src/app.module.ts` for MailerModule configuration using environment variables
 
-### 12. External API Client Pattern
+### 15. External API Client Pattern
 
 For external API integrations, use `HttpService` from `@nestjs/axios`:
 - See `src/common/services/external-user-management.service.ts` for complete external API integration example with `HttpService`, `ConfigService`, error handling, and transaction rollback patterns
 
-### 13. Email Templates with Handlebars
+### 16. Email Templates with Handlebars
 
 The project uses Handlebars templates for emails via `@nestjs-modules/mailer`:
 
@@ -370,7 +370,7 @@ The project uses Handlebars templates for emails via `@nestjs-modules/mailer`:
 
 **MailerModule is configured in `app.module.ts`** - templates are in `templates/email/` directory.
 
-### 14. Soft Deletes
+### 17. Soft Deletes
 
 Since `BasicEntity` includes `deletedAt`, entities support soft deletes:
 
@@ -381,13 +381,13 @@ Since `BasicEntity` includes `deletedAt`, entities support soft deletes:
 - See existing services for examples of querying with `withDeleted: true` option
 - TypeORM automatically excludes soft-deleted records by default
 
-### 15. QueryBuilder with Relations
+### 18. QueryBuilder with Relations
 
 Use `leftJoinAndSelect` or `innerJoinAndSelect` to load relations:
 - See `src/app-documents/groups/pipe/find-group-or-fail-pipe.service.ts` for QueryBuilder with relations example
 - See `src/app-api/client/client.service.ts` for QueryBuilder usage patterns
 
-### 16. Service Return Format Variations
+### 19. Service Return Format Variations
 
 **Tuple format (recommended for BaseController):**
 - See `src/app-api/client/client.service.ts` for tuple format `[items, total]` return examples
@@ -395,20 +395,20 @@ Use `leftJoinAndSelect` or `innerJoinAndSelect` to load relations:
 
 **Note:** BaseController automatically handles tuple format `[items, total]`. If you need to map/transform items, map them first, then return as tuple `[mappedItems, total]`. This keeps the response format consistent.
 
-### 17. HTTP Exceptions
+### 20. HTTP Exceptions
 
 Use appropriate HTTP exceptions for error handling:
 - See `src/app-api/client/pipe/find-client-or-fail-pipe.service.ts` for `NotFoundException` usage
 - See `src/app-auth/auth/auth.service.ts` for various HTTP exception patterns (`ConflictException`, `UnauthorizedException`, etc.)
 - See `src/app-auth/guards/jwt-auth.guard.ts` for guard exception handling
 
-### 18. Cron Jobs Pattern
+### 21. Cron Jobs Pattern
 
 For scheduled tasks, use `@nestjs/schedule`:
 - See `src/app-jobs/jobs.service.ts` for `@Cron` and `@Interval` decorator usage examples
 - See `src/app-jobs/app-jobs.module.ts` for `ScheduleModule.forRoot()` configuration
 
-### 19. Code Organization Within Modules
+### 22. Code Organization Within Modules
 
 Each feature/resource within an `app-*` module should follow this structure:
 
@@ -541,7 +541,7 @@ This micro-app is different from the general structure. It's not based on the cl
 **RateLimitGuard Usage:**
 - See `src/app-auth/auth/auth.controller.ts` for RateLimitGuard usage examples with `@UseGuards()`
 
-**Note:** RateLimitGuard is configured with max requests per window. Check `src/app-auth/guards/rate-limit.guard.ts` for current settings.
+**Note:** RateLimitGuard is configured with max requests per window. Check `src/common/guards/rate-limit.guard.ts` for current settings.
 
 ---
 
@@ -929,8 +929,6 @@ Use these as live templates when creating new features.
 ### MDC Implementation
 
 - **`src/common/mdc/*`**: MDC (Mapped Diagnostic Context) implementation for request correlation (requestId, userId, email).
-
----
 
 ---
 
